@@ -3,15 +3,25 @@
 <head>
   <title>TinyApp</title>
 </head>
-<body>
+  <body>
 
-<% include _header.ejs %>
+  <% include _header.ejs %>
+  <% var url = `/urls/${shortURL}`%>
 
-<h2>Full URL</h2>
-<p><%= longURL %></p>
+  <h2>Shortened URL: <%= shortURL %></h2>
+    <table>
+      <tr>
+          <td>
+        <form action="<%= url%>" method="POST" style="margin:5px;">
+        <input type="text" name="longURL" placeholder="<%= longURL %>">
+        <input type="submit" value="Update">
+        </form>
+          </td>
+          <td>
 
-<h2>Shortened URL</h2>
-<p><%= shortURL %></p>
+          </td>
+      </tr>
+    </table>
 
-</body>
+  </body>
 </html>

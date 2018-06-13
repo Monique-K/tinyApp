@@ -21,18 +21,19 @@ app.get("/urls.json", (req, res) => {
   res.json(URLDatabase);
 });
 
-app.get("/urls", (req, res) => {
+app.get("/urls", (req, res) => { //get main db page
   let templateVars = { URLs: URLDatabase};
   res.render("urls_index", templateVars);
 });
 
-app.get("/urls/new", (req, res) => {
+app.get("/urls/new", (req, res) => { //get new url page
   res.render("urls_new");
 });
 
-app.post("/urls", (req, res) => {
-  console.log(req.body);  // debug statement to see POST parameters
-  res.send("Ok");
+app.post("/urls", (req, res) => { //add the new url to the main pg
+  console.log(req.body);
+  URLDatabase[generateRandomString()] = req.body.longURL
+  res.redirect('/urls');
 });
 
 app.get("/u/:shortURL", (req, res) => {
@@ -40,7 +41,7 @@ app.get("/u/:shortURL", (req, res) => {
   if (req.params.shortURL in URLDatabase) {
     res.redirect(longURL);
   } else {
-    res.sendStatus(302); // Don't think this works
+    res.sendStatus(302);
   }
 });
 
@@ -49,7 +50,7 @@ app.get("/urls/:id", (req, res) => {
   let longURL = URLDatabase[shortURL]
   if (longURL) {
     let templateVars = { shortURL: shortURL, longURL: longURL};
-    res.render("urls_show", templateVars);
+    res.render("urls_show", templateVars); //go to page for that url
     console.log(shortURL);
   } else {
     res.sendStatus(404);
@@ -65,10 +66,16 @@ app.listen(PORT, () => {
 });
 
 app.post('/urls/:id/delete', (req, res) => {
-  console.log("delete", req.params.id)
+  console.log("delete", req.params.id) //delete a user and reload the pg
   delete URLDatabase[req.params.id];
-  res.redirect("/urls") //not sure this works either
+  res.redirect("/urls")
 });
+
+app.post('/urls/:id', (req, res) => { //update a longurl and redirect to main pg
+  console.log("body", req.body);
+  URLDatabase[req.params.id] = req.body.longURL;
+  res.redirect("/urls")
+})
 
 function generateRandomString() {
   let randomArray = []
