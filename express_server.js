@@ -91,7 +91,15 @@ app.get('/logout', (req, res) => {
   res.redirect("/urls")
 });
 
+app.get('/register', (req, res) => { //render registration page
+  let templateVars = {username: req.cookies["username"]};
+  res.render("register", templateVars);
+});
 
+app.post('/urls/register', (req, res) => { //post login credentials to /register
+
+    res.redirect("/urls")
+});
 
 function generateRandomString() {
   let randomArray = []

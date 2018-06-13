@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  </head>
+  <body style="font-size:20px; padding:50px;">
+    <% include _header.ejs %>
+    <form action="/urls" method="POST" style="margin:150px;">
+      <label for="email">email:</label>
+      <input id="email" type="email" name="email" placeholder="your@email.com" style="width: 300px">
+      <br>
+      <label for="email">password:</label>
+      <input id="password" type="password" name="password" placeholder="your password" style="width: 300px">
+      <br>
+      <input type="submit" value="Submit">
+    </form>
+  </body>
+</html>
