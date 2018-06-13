@@ -4,8 +4,14 @@
     <title>TinyApp</title>
   </head>
 <body>
-  <header style="color:teal;">
+
+  <header style="background-color:#e8e8e8" style="color:teal;">
     <h1> Welcome to TinyApp </h1>
+      <form action="/login" method="post">
+      <input type ="text" placeholder="Enter your username" name="username">
+      <input type="submit" value="Submit">  <%= username%>
+      </form>
+
   </header>
 </body>
 </html>

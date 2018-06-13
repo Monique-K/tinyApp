@@ -3,6 +3,8 @@ var app = express();
 var PORT = 8080;
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
+var cookieParser = require('cookie-parser')
+app.use(cookieParser())
 
 app.set("view engine", "ejs");
 
@@ -22,12 +24,15 @@ app.get("/urls.json", (req, res) => {
 });
 
 app.get("/urls", (req, res) => { //get main db page
-  let templateVars = { URLs: URLDatabase};
+  let templateVars = { URLs: URLDatabase, username: req.cookies["username"]};
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => { //get new url page
-  res.render("urls_new");
+  let templateVars = {
+  username: req.cookies["username"],
+};
+  res.render("urls_new", templateVars);
 });
 
 app.post("/urls", (req, res) => { //add the new url to the main pg
@@ -49,7 +54,7 @@ app.get("/urls/:id", (req, res) => {
   let shortURL = req.params.id
   let longURL = URLDatabase[shortURL]
   if (longURL) {
-    let templateVars = { shortURL: shortURL, longURL: longURL};
+    let templateVars = { shortURL: shortURL, longURL: longURL, username: req.cookies["username"]};
     res.render("urls_show", templateVars); //go to page for that url
     console.log(shortURL);
   } else {
@@ -75,7 +80,15 @@ app.post('/urls/:id', (req, res) => { //update a longurl and redirect to main pg
   console.log("body", req.body);
   URLDatabase[req.params.id] = req.body.longURL;
   res.redirect("/urls")
-})
+});
+
+app.post('/login', (req, res) => { //create a cookie with username
+  res.cookie("username", req.body.username) //doesn't stay on all pgs
+  res.redirect("/urls")
+});
+
+
+
 
 function generateRandomString() {
   let randomArray = []
