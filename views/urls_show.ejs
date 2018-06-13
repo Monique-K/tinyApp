@@ -13,7 +13,7 @@
       <tr>
           <td>
         <form action="<%= url%>" method="POST" style="margin:5px;">
-        <input type="text" name="longURL" placeholder="<%= longURL %>">
+        <input type="text" name="longURL" placeholder="<%= longURL %>" minlength=1 required>
         <input type="submit" value="Update">
         </form>
           </td>

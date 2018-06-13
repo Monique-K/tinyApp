@@ -77,16 +77,19 @@ app.post('/urls/:id/delete', (req, res) => {
 });
 
 app.post('/urls/:id', (req, res) => { //update a longurl and redirect to main pg
-  console.log("body", req.body);
-  URLDatabase[req.params.id] = req.body.longURL;
-  res.redirect("/urls")
+    console.log("body", req.body);
+    URLDatabase[req.params.id] = req.body.longURL;
+    res.redirect("/urls")
 });
 
-app.post('/login', (req, res) => { //create a cookie with username
-  res.cookie("username", req.body.username) //doesn't stay on all pgs
-  res.redirect("/urls")
+app.post('/login', (req, res) => { //create a cookie with username, let user log in
+  res.cookie("username", req.body.username)
 });
 
+app.get('/logout', (req, res) => {
+  res.clearCookie("username");
+  res.redirect("/urls")
+});
 
 
 
