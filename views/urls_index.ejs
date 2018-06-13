@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>TinyApp</title>
+</head>
+<body>
+
+  <% include _header.ejs %>
+
+  <h2>Original & Shortened URLs</h2>
+
+  <table border="5" cellpadding="7">
+    <tr>
+      <th>Original URLs</th>
+      <th>Shortened URLs</th>
+      <% for (let shortURL in URLs) {
+        var url = `/urls/${shortURL}/delete`
+      %>
+    </tr>
+    <tr>
+      <td><%= URLs[shortURL] %> </td>
+      <td><%= shortURL %></td>
+      <td>
+        <form method="POST" action="<%= url %>"><!-- not sure this works-->
+          <button>Delete</button>
+        </form>
+      </td>
+    </tr>
+    <% } %>
+  </table>
+
+</body>
+</html>
