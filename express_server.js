@@ -15,6 +15,29 @@ var URLDatabase = {
   "asdf12": "www.facebook.com"
 };
 
+const users = {
+  "userRandomID": {
+    id: "userRandomID",
+    email: "user@example.com",
+    password: "purple-monkey-dinosaur"
+  },
+ "user2RandomID": {
+    id: "user2RandomID",
+    email: "user2@example.com",
+    password: "dishwasher-funk"
+  },
+  "user3RandomID": {
+    id: "user3RandomID",
+    email: "user3@example.com",
+    password: "best-app-ever"
+  },
+  "user4RandomID": {
+    id: "user4RandomID",
+    email: "user4@example.com",
+    password: "shhhhhhhh!"
+  }
+};
+
 app.get("/", (req, res) => {
   res.end("Hello!");
 });
@@ -36,7 +59,7 @@ app.get("/urls/new", (req, res) => { //get new url page
 });
 
 app.post("/urls", (req, res) => { //add the new url to the main pg
-  console.log(req.body);
+  console.log('urls:post',req.body);
   URLDatabase[generateRandomString()] = req.body.longURL
   res.redirect('/urls');
 });
@@ -76,8 +99,19 @@ app.post('/urls/:id/delete', (req, res) => {
   res.redirect("/urls")
 });
 
+app.post('/urls/register', (req, res) => { //post login credentials to /register
+    const idString = generateRandomString();
+    users[idString] = {                     //add new user to the db
+      id: idString,
+      email: req.body.email,
+      password: req.body.password
+    }
+    console.log("body",  req.body);
+    res.cookie("user_id", idString)
+    res.redirect("/urls")
+});
+
 app.post('/urls/:id', (req, res) => { //update a longurl and redirect to main pg
-    console.log("body", req.body);
     URLDatabase[req.params.id] = req.body.longURL;
     res.redirect("/urls")
 });
@@ -94,11 +128,6 @@ app.get('/logout', (req, res) => {
 app.get('/register', (req, res) => { //render registration page
   let templateVars = {username: req.cookies["username"]};
   res.render("register", templateVars);
-});
-
-app.post('/urls/register', (req, res) => { //post login credentials to /register
-
-    res.redirect("/urls")
 });
 
 function generateRandomString() {
