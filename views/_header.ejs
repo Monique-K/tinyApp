@@ -1,26 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <title>TinyApp</title>
-  </head>
-<body>
 
-  <header style="background-color:#e8e8e8">
+  <header style="background-color:#73b9d1">
     <h1> Welcome to TinyApp </h1>
-      <form action="/login" method="post">
-      <input type ="text" <% if(username){ %>
-        placeholder="Welcome, <%= username%>"
-        <% } else{ %>
-        placeholder="Enter your username"
-      <% } %> name="username">
-
-      <input type="submit" <% if(username){ %>
-        value="Logout"
-        <% } else{ %>
-        value="Login"
-      <% } %>>
+    <% if (user) { %>
+      <div>Welcome <%= user.email %></div>
+      <form action="/logout" method="POST">
+        <button type="submit">Logout</button>
       </form>
-
+    <% } else { %>
+       <a href="/login"> Login </a>
+       <br>
+       <a href="/register"> Register </a>
+    <% } %>
   </header>
-</body>
-</html>

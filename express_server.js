@@ -8,6 +8,16 @@ app.use(cookieParser())
 
 app.set("view engine", "ejs");
 
+function generateRandomString() {
+  let randomArray = []
+  let choices ="qwertyuioplkjhgfdsazxcvbnm1234567890"
+  for (let i = 0; i < 6; i ++) {
+    let randomchoice = Math.floor(Math.random() * 37);
+    randomArray.push(choices[randomchoice]);
+    randomString = randomArray.join("");
+  }
+  return randomString;
+};
 
 var URLDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -38,52 +48,14 @@ const users = {
   }
 };
 
-app.get("/", (req, res) => {
-  res.end("Hello!");
-});
-
-app.get("/urls.json", (req, res) => {
-  res.json(URLDatabase);
-});
-
-app.get("/urls", (req, res) => { //get main db page
-  let templateVars = { URLs: URLDatabase, username: req.cookies["username"]};
-  res.render("urls_index", templateVars);
-});
-
-app.get("/urls/new", (req, res) => { //get new url page
-  let templateVars = {
-  username: req.cookies["username"],
-};
-  res.render("urls_new", templateVars);
-});
-
-app.post("/urls", (req, res) => { //add the new url to the main pg
-  console.log('urls:post',req.body);
-  URLDatabase[generateRandomString()] = req.body.longURL
-  res.redirect('/urls');
-});
-
-app.get("/u/:shortURL", (req, res) => {
-  var longURL = URLDatabase[req.params.shortURL];
-  if (req.params.shortURL in URLDatabase) {
-    res.redirect(longURL);
-  } else {
-    res.sendStatus(302);
-  }
-});
-
-app.get("/urls/:id", (req, res) => {
-  let shortURL = req.params.id
-  let longURL = URLDatabase[shortURL]
-  if (longURL) {
-    let templateVars = { shortURL: shortURL, longURL: longURL, username: req.cookies["username"]};
-    res.render("urls_show", templateVars); //go to page for that url
-    console.log(shortURL);
-  } else {
-    res.sendStatus(404);
-  }
-});
+// var authenticateUser = (req, res, next) => {
+//   if(req.cookies.user_id) {
+//     //find it in obj
+//     next()
+//   } else {
+//     res.redirect('/login')
+//   }
+// }
 
 app.get("/hello", (req, res) => {
   res.end("<html><body>Hello <b>World</b></body></html>\n");
@@ -93,51 +65,127 @@ app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
-app.post('/urls/:id/delete', (req, res) => {
-  console.log("delete", req.params.id) //delete a user and reload the pg
-  delete URLDatabase[req.params.id];
-  res.redirect("/urls")
+app.get("/", (req, res) => {
+  res.end("Hello!");
 });
 
-app.post('/urls/register', (req, res) => { //post login credentials to /register
+app.get("/urls.json", (req, res) => {
+  res.json(URLDatabase);
+});
+
+//get main db page
+app.get("/urls", /*authenticateUser,*/ (req, res) => {
+  let templateVars = { URLs: URLDatabase, user: users[req.cookies.user_id]};
+  res.render("urls_index", templateVars);
+});
+
+//get new url page
+app.get("/urls/new", (req, res) => {
+  let templateVars = {
+  user: req.cookie.users[idString],
+};
+  res.render("urls_new", templateVars);
+});
+
+//add the new url to the main pg
+app.post("/urls", (req, res) => {
+  console.log('urls:post',req.body);
+  URLDatabase[generateRandomString()] = req.body.longURL
+  res.redirect('/urls');
+});
+
+//use shortURL to reach webpage
+app.get("/u/:shortURL", (req, res) => {
+  var longURL = URLDatabase[req.params.shortURL];
+  if (req.params.shortURL in URLDatabase) {
+    res.redirect(longURL);
+  } else {
+    res.sendStatus(302);
+  }
+});
+
+//go to the individual _show pg
+app.get("/urls/:id", (req, res) => {
+  let shortURL = req.params.id
+  let longURL = URLDatabase[shortURL]
+  if (longURL) {
+    let templateVars = { shortURL: shortURL, longURL: longURL, user: users[req.cookies.user_id]};
+    res.render("urls_show", templateVars);
+    console.log(shortURL);
+  } else {
+    res.sendStatus(404);
+  }
+});
+
+//get registration page
+app.get("/register", (req, res) => {
+  res.render("register", {user: {email: 'rob@thebrewbox.co'}});
+});
+
+//post login credentials to /register & add new user to the db
+app.post('/urls/register', (req, res) => {
     const idString = generateRandomString();
-    users[idString] = {                     //add new user to the db
-      id: idString,
-      email: req.body.email,
-      password: req.body.password
+    if (req.body.email === "" || req.body.password === "") {
+      res.sendStatus(400)
+    } else {
+      var regristrationRejection = false;
+      for (idString in users) {
+        console.log("user", users[idString])
+        if (users[idString].email === req.body.email) {
+          regristrationRejection = true;
+        }
+      }
+      if (regristrationRejection) {
+        res.sendStatus(400)
+      } else {
+        users[idString] = {
+          id: idString,
+          email: req.body.email,
+          password: req.body.password
+        }
+        res.cookie("user_id", idString)
+        res.redirect("/urls")
+      }
     }
-    console.log("body",  req.body);
-    res.cookie("user_id", idString)
-    res.redirect("/urls")
 });
 
-app.post('/urls/:id', (req, res) => { //update a longurl and redirect to main pg
+//allow users to login
+app.post('/login', (req, res) => {
+    if (req.body.email === "" || req.body.password === "") {
+      res.sendStatus(400)
+      return
+    } else {
+      const userArray = Object.values(users)
+      userArray.forEach(function(user) {
+        console.log(user);
+        if (user.email === req.body.email && user.password === req.body.password) {
+          res.cookie('user_id', user.id)
+          res.redirect('/')
+        } else {
+          res.sendStatus(400);
+        }
+      })
+    }
+});
+
+//get login pg
+app.get("/login", (req, res) => {
+  let templateVars = {user: users[req.cookies.user_id]};
+  res.render("login", templateVars);
+});
+
+//update a longurl and redirect to main pg
+app.post('/urls/:id', (req, res) => {
     URLDatabase[req.params.id] = req.body.longURL;
     res.redirect("/urls")
 });
 
-app.post('/login', (req, res) => { //create a cookie with username, let user log in
-  res.cookie("username", req.body.username)
-});
-
-app.get('/logout', (req, res) => {
-  res.clearCookie("username");
+//delete a user and reload the pg
+app.post('/urls/:id/delete', (req, res) => {
+  console.log("delete", req.params.id)
+  delete URLDatabase[req.params.id];
   res.redirect("/urls")
 });
 
-app.get('/register', (req, res) => { //render registration page
-  let templateVars = {username: req.cookies["username"]};
-  res.render("register", templateVars);
-});
 
-function generateRandomString() {
-  let randomArray = []
-  let choices ="qwertyuioplkjhgfdsazxcvbnm1234567890"
-  for (let i = 0; i < 6; i ++) {
-    let randomchoice = Math.floor(Math.random() * 37);
-    randomArray.push(choices[randomchoice]);
-    randomString = randomArray.join("");
-  }
-  return randomString;
-}
 

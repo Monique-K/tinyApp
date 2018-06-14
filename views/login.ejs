@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  </head>
+  <body style="font-size:20px; padding:50px;">
+    <% include _header.ejs %>
+   <h2>Please enter your email and password</h2>
+      <form action="/login" method="POST">
+        email: <input type ="text" name="email">
+        <br>
+        password: <input type ="text" name="password">
+        <br>
+        <button type="submit">Login</button>
+      </form>
+
+  </body>
+</html>
