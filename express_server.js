@@ -1,12 +1,20 @@
-let express = require("express");
-let app = express();
-let PORT = 8080;
+const express = require("express");
+const app = express();
+const PORT = 8080;
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
-let cookieParser = require('cookie-parser')
+const cookieParser = require('cookie-parser')
 app.use(cookieParser())
-
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
+cookieSession = require('cookie-session')
 app.set("view engine", "ejs");
+
+app.use(cookieSession({
+  name: 'session',
+  keys: ["blah blah"],
+  maxAge: 24 * 60 * 60 * 1000
+}))
 
 function generateRandomString() {
   let randomArray = []
@@ -19,34 +27,46 @@ function generateRandomString() {
   return randomString;
 };
 
+function urlsForUser(id) {
+  let currentUserURLS = {};
+  for (shortURL in URLDatabase) {
+    if (id === URLDatabase[shortURL].user_id) {
+    currentUserURLS[shortURL] = URLDatabase[shortURL];
+  }
+ }
+ return currentUserURLS;
+};
+
 const URLDatabase = {
   "b2xVn2": {shortURL: "b2xVn2", longURL: "http://www.lighthouselabs.ca", user_id: "user2RandomID"},
-  "9sm5xK": {shortURL: "9sm5xK", longURL: "www.google.com", user_id: "user3RandomID"},
-  "asdf12": {shortURL: "asdf12", longURL: "www.facebook.com", user_id: "user3RandomID"}
+  "9sm5xK": {shortURL: "9sm5xK", longURL: "http://www.google.com", user_id: "user3RandomID"},
+  "asdf12": {shortURL: "asdf12", longURL: "http://www.facebook.com", user_id: "user3RandomID"}
 };
 
 const users = {
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur"
+    password: bcrypt.hashSync("purple-monkey-dinosaur", 10)
   },
  "user2RandomID": {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "dishwasher-funk"
+    password: bcrypt.hashSync("dishwasher-funk", 10)
   },
   "user3RandomID": {
     id: "user3RandomID",
     email: "user3@example.com",
-    password: "best-app-ever"
+    password: bcrypt.hashSync("best-app-ever", 10)
   },
   "user4RandomID": {
     id: "user4RandomID",
     email: "user4@example.com",
-    password: " "
+    password: bcrypt.hashSync("a", 10)
   }
 };
+
+console.log(bcrypt.hashSync("purple-monkey-dinosaur", 10));
 
 app.get("/hello", (req, res) => {
   res.end("<html><body>Hello <b>World</b></body></html>\n");
@@ -64,21 +84,21 @@ app.get("/urls.json", (req, res) => {
   res.json(URLDatabase);
 });
 
-//get main url list page
+//get main url list page with only the user's URLs
 app.get("/urls", (req, res) => {
-  let templateVars = { URLs: URLDatabase, user: users[req.cookies.user_id]};
-  if (req.cookies.user_id) {
-      return res.render("urls_index", templateVars)
+  let usersURLs = urlsForUser(req.session.user_id)
+  let templateVars = { URLs: usersURLs, user: users[req.session.user_id]};
+  if (req.session.user_id) {
+      return res.render("urls_index", templateVars);
     } else {
       res.redirect("/login");
-      }
+    }
 });
 
 //get new url page
 app.get("/urls/new", (req, res) => {
     res.render("urls/new", templateVars);
 });
-
 
 //add the new url to the main pg
 app.post("/urls", (req, res) => {
@@ -88,7 +108,7 @@ app.post("/urls", (req, res) => {
 
 //use shortURL to reach webpage
 app.get("/u/:shortURL", (req, res) => {
-  var longURL = URLDatabase[req.params.shortURL];
+  var longURL = URLDatabase[req.params.shortURL].longURL;
   if (req.params.shortURL in URLDatabase) {
     res.redirect(longURL);
   } else {
@@ -103,13 +123,14 @@ app.get("/register", (req, res) => {
 
 //register - post user credentials to /register & add new user to the db
 app.post('/urls/register', (req, res) => {
+    const hashedPassword = bcrypt.hashSync(req.body.password, 10);
     var idString = generateRandomString();
     if (req.body.email === "" || req.body.password === "") {
       res.sendStatus(400)
     } else {
       var regristrationRejection = false;
-      for (idString in users) {
-        if (users[idString].email === req.body.email) {
+      for (user in users) {
+        if (users[user].email === req.body.email) {
           regristrationRejection = true;
         }
       }
@@ -119,50 +140,55 @@ app.post('/urls/register', (req, res) => {
         users[idString] = {
           id: idString,
           email: req.body.email,
-          password: req.body.password
+          password: hashedPassword
         }
-        res.cookie("user_id", idString)
+        req.session.user_id = "idString"
         res.redirect("/urls")
       }
     }
 });
 
-//login
+//login only with existing username and password
 app.post('/login', (req, res) => {
     if (req.body.email === "" || req.body.password === "") {
       res.sendStatus(400)
       return
     } else {
+      let userFound = false;
       const userArray = Object.values(users)
       userArray.forEach(function(user) {
-        if (user.email === req.body.email && user.password === req.body.password) {
-          res.cookie('user_id', user.id)
-          res.redirect('/')
-          return
+        if (user.email === req.body.email && bcrypt.compareSync(req.body.password, user.password)) {
+          userFound = user;
         }
       })
-    }  //-------------------------------what if they are not empty but not correct??
+      if (userFound) {
+        req.session.user_id = "idString"
+        res.redirect('/urls')
+      } else {
+        res.sendStatus(404);
+      }
+    }
 });
 
 //get login pg
 app.get("/login", (req, res) => {
-  let templateVars = {user: users[req.cookies.user_id]};
+  let templateVars = {user: users[req.session.user_id]};
   res.render("login", templateVars);
 });
 
 //logout
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session = null; //-------------------------------
   res.redirect("login");
 });
 
 //update a longurl and redirect to main pg
 app.post('/urls/:id', (req, res) => {
-    if (req.cookies.user_id === URLDatabase[req.params.id].user_id) {
+    if (req.session.user_id === URLDatabase[req.params.id].user_id) {
       URLDatabase[req.params.id] = req.body.longURL;
       res.redirect("/urls")
     }else {
-      res.sendStatus(404)
+      res.sendStatus(404);
     }
 });
 
@@ -174,10 +200,14 @@ app.post('/urls/:id/delete', (req, res) => {
 
 //go to the individual _show pg
 app.get("/urls/:id", (req, res) => {
+  let usersURLs = urlsForUser(req.session.user_id)
   let shortURL = req.params.id
   let longURL = URLDatabase[shortURL]
-  if (longURL) {
-    let templateVars = { shortURL: shortURL, longURL: longURL, user: users[req.cookies.user_id]};
+  if (usersURLs.user_id !== req.session.user_id) {
+    res.send({ message: 'Sorry, this URL does not belong to you!' });
+    res.sendStatus(404);
+  }else if (longURL) {
+    let templateVars = { shortURL: shortURL, longURL: longURL, user: users[req.session.user_id]};
     res.render("/urls_show", templateVars);
   } else {
     res.sendStatus(404);
