@@ -12,12 +12,11 @@
     <tr>
       <th>Original URLs</th>
       <th>Shortened URLs</th>
-      <% for (let shortURL in URLs) {
-        var url = `/urls/${shortURL}/delete`
-      %>
     </tr>
+    <% for (let shortURL in URLs) { %>
+        <% var url = `/urls/${shortURL}/delete` %>
     <tr>
-      <td><%= URLs[shortURL] %></td>
+      <td><%= URLs[shortURL].longURL %></td>
       <td><%= shortURL %></td>
 
       <td>

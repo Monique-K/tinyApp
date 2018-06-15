@@ -1,9 +1,9 @@
-var express = require("express");
-var app = express();
-var PORT = 8080;
+let express = require("express");
+let app = express();
+let PORT = 8080;
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
-var cookieParser = require('cookie-parser')
+let cookieParser = require('cookie-parser')
 app.use(cookieParser())
 
 app.set("view engine", "ejs");
@@ -19,10 +19,10 @@ function generateRandomString() {
   return randomString;
 };
 
-var URLDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com",
-  "asdf12": "www.facebook.com"
+const URLDatabase = {
+  "b2xVn2": {shortURL: "b2xVn2", longURL: "http://www.lighthouselabs.ca", user_id: "user2RandomID"},
+  "9sm5xK": {shortURL: "9sm5xK", longURL: "www.google.com", user_id: "user3RandomID"},
+  "asdf12": {shortURL: "asdf12", longURL: "www.facebook.com", user_id: "user3RandomID"}
 };
 
 const users = {
@@ -48,15 +48,6 @@ const users = {
   }
 };
 
-// var authenticateUser = (req, res, next) => {
-//   if(req.cookies.user_id) {
-//     //find it in obj
-//     next()
-//   } else {
-//     res.redirect('/login')
-//   }
-// }
-
 app.get("/hello", (req, res) => {
   res.end("<html><body>Hello <b>World</b></body></html>\n");
 });
@@ -73,19 +64,21 @@ app.get("/urls.json", (req, res) => {
   res.json(URLDatabase);
 });
 
-//get main db page
-app.get("/urls", /*authenticateUser,*/ (req, res) => {
+//get main url list page
+app.get("/urls", (req, res) => {
   let templateVars = { URLs: URLDatabase, user: users[req.cookies.user_id]};
-  res.render("urls_index", templateVars);
+  if (req.cookies.user_id) {
+      return res.render("urls_index", templateVars)
+    } else {
+      res.redirect("/login");
+      }
 });
 
 //get new url page
 app.get("/urls/new", (req, res) => {
-  let templateVars = {
-  user: req.cookie.users[idString],
-};
-  res.render("urls_new", templateVars);
+    res.render("urls/new", templateVars);
 });
+
 
 //add the new url to the main pg
 app.post("/urls", (req, res) => {
@@ -103,21 +96,9 @@ app.get("/u/:shortURL", (req, res) => {
   }
 });
 
-//go to the individual _show pg
-app.get("/urls/:id", (req, res) => {
-  let shortURL = req.params.id
-  let longURL = URLDatabase[shortURL]
-  if (longURL) {
-    let templateVars = { shortURL: shortURL, longURL: longURL, user: users[req.cookies.user_id]};
-    res.render("urls_show", templateVars);
-  } else {
-    res.sendStatus(404);
-  }
-});
-
 //get registration page
 app.get("/register", (req, res) => {
-  res.render("register", {user: {email: 'rob@thebrewbox.co'}});
+  res.render("register");
 });
 
 //register - post user credentials to /register & add new user to the db
@@ -160,8 +141,7 @@ app.post('/login', (req, res) => {
           return
         }
       })
-    }
-    res.sendStatus(400)
+    }  //-------------------------------what if they are not empty but not correct??
 });
 
 //get login pg
@@ -178,8 +158,12 @@ app.post("/logout", (req, res) => {
 
 //update a longurl and redirect to main pg
 app.post('/urls/:id', (req, res) => {
-    URLDatabase[req.params.id] = req.body.longURL;
-    res.redirect("/urls")
+    if (req.cookies.user_id === URLDatabase[req.params.id].user_id) {
+      URLDatabase[req.params.id] = req.body.longURL;
+      res.redirect("/urls")
+    }else {
+      res.sendStatus(404)
+    }
 });
 
 //delete a user and reload the pg
@@ -187,6 +171,21 @@ app.post('/urls/:id/delete', (req, res) => {
   delete URLDatabase[req.params.id];
   res.redirect("/urls")
 });
+
+//go to the individual _show pg
+app.get("/urls/:id", (req, res) => {
+  let shortURL = req.params.id
+  let longURL = URLDatabase[shortURL]
+  if (longURL) {
+    let templateVars = { shortURL: shortURL, longURL: longURL, user: users[req.cookies.user_id]};
+    res.render("/urls_show", templateVars);
+  } else {
+    res.sendStatus(404);
+  }
+})
+
+
+
 
 
 

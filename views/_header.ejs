@@ -1,7 +1,7 @@
 
   <header style="background-color:#73b9d1">
     <h1> Welcome to TinyApp </h1>
-    <% if (user) { %>
+    <% if (typeof(user) != "undefined") { %>
       <div>Welcome <%= user.email %></div>
       <form action="/logout" method="POST">
         <button type="submit">Logout</button>
