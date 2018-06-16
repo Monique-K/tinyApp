@@ -71,16 +71,16 @@ const users = {
   }
 };
 
-app.get("/hello", (req, res) => {
-  res.end("<html><body>Hello <b>World</b></body></html>\n");
-});
-
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
 app.get("/", (req, res) => {
-  res.end("Hello!");
+  if (req.session) {
+    res.redirect("/login");
+  } else {
+    res.redirect("/register");
+  }
 });
 
 app.get("/urls.json", (req, res) => {
@@ -89,9 +89,9 @@ app.get("/urls.json", (req, res) => {
 
 //get main url list page with only the user's URLs
 app.get("/urls", (req, res) => {
-  let usersURLs = urlsForUser(req.session.user_id)
-  let templateVars = { URLs: usersURLs, user: users[req.session.user_id]};
   if (req.session.user_id) {
+  let usersURLs = urlsForUser(req.session.user_id)
+  let templateVars = {URLs: usersURLs, user: users[req.session.user_id]};
       return res.render("urls_index", templateVars);
     } else {
       res.redirect("/login");
@@ -99,20 +99,21 @@ app.get("/urls", (req, res) => {
 });
 
 //get new url page
-app.get("/urls/new", (req, res) => { //-------------------------------------------------
+app.get("/urls/new", (req, res) => {
   if (!req.session.user_id) {
-    res.send({ message: 'Sorry, only logged in users can shorten URLs!' });
+    res.redirect("/login");
     return
   } else {
     let usersURLs = urlsForUser(req.session.user_id)
-    let templateVars = { URLs: usersURLs, user: users[req.session.user_id], session: req.session};
+    let templateVars = {URLs: usersURLs, user: users[req.session.user_id], session: req.session};
     res.render("urls_new", templateVars);
   }
 });
 
 //add the new url to the main pg
 app.post("/urls", (req, res) => {
-  URLDatabase[generateRandomString()] = req.body.longURL
+  let randomString = generateRandomString();
+  URLDatabase[randomString] = {shortURL: randomString, longURL: req.body.longURL, user_id: req.session.user_id}
   res.redirect('/urls');
 });
 
@@ -122,13 +123,16 @@ app.get("/u/:shortURL", (req, res) => {
   if (req.params.shortURL in URLDatabase) {
     res.redirect(longURL);
   } else {
-    res.sendStatus(302);
+    let templateVars = {errorMsg: "Incorrect short URL. Please try again."}
+    res.status(302);
+    res.render("errors", templateVars);
   }
 });
 
 //get registration page
 app.get("/register", (req, res) => {
-  res.render("/register");
+  let templateVars = {user: users[req.session.user_id]};
+  res.render("register", templateVars);
 });
 
 //register - post user credentials to /register & add new user to the db
@@ -136,7 +140,9 @@ app.post('/urls/register', (req, res) => {
     const hashedPassword = bcrypt.hashSync(req.body.password, 10);
     var idString = generateRandomString();
     if (req.body.email === "" || req.body.password === "") {
-      res.sendStatus(400)
+      let templateVars = {errorMsg: "Please enter an email and password."}
+      res.status(400);
+      res.render("errors", templateVars);
     } else {
       var regristrationRejection = false;
       for (user in users) {
@@ -145,14 +151,16 @@ app.post('/urls/register', (req, res) => {
         }
       }
       if (regristrationRejection) {
-        res.sendStatus(400)
+        let templateVars = {errorMsg: "Please enter a valid email and password."}
+        res.status(400);
+        res.render("errors", templateVars);
       } else {
         users[idString] = {
           id: idString,
           email: req.body.email,
           password: hashedPassword
         }
-        req.session.user_id = "idString" //------------------------------------
+        req.session.user_id = users[idString].id
         res.redirect("/urls")
       }
     }
@@ -162,26 +170,25 @@ app.post('/urls/register', (req, res) => {
 app.post('/login', (req, res) => {
     let templateVars = {user: users[req.session.user_id]};
     if (req.body.email === "" || req.body.password === "") {
-      res.sendStatus(400)
+      let templateVars = {errorMsg: "Please enter an email and password."}
+      res.status(400);
+      res.render("errors", templateVars);
       return
     } else {
       let userFound = false;
       const userArray = Object.values(users)
       userArray.forEach(function(user) {
-        console.log("user", user);
         if (user.email === req.body.email && bcrypt.compareSync(req.body.password, user.password)) {
           userFound = user
-
-          //let user.id = currentUserID;
         }
     })
       if (userFound) {
-
-        req.session.user_id = userFound.id; //---------------------------------
-        console.log("req.session", req.session);
+        req.session.user_id = userFound.id;
         res.redirect('/urls');
       } else {
-        res.sendStatus(404);
+        let templateVars = {errorMsg: "Please enter a valid email and password."}
+        res.status(404);
+        res.render("errors", templateVars);
       }
     }
 });
@@ -200,12 +207,29 @@ app.post("/logout", (req, res) => {
 
 //update a longurl and redirect to main pg
 app.post('/urls/:id', (req, res) => {
-    if (req.session.user_id === URLDatabase[req.params.id].user_id) {
-      URLDatabase[req.params.id] = req.body.longURL;
-      res.redirect("/urls")
-    }else {
-      res.sendStatus(404);
+    if (req.session.user_id === Users[req.params.id].user_id) {
+      let shortURL = req.params.id;
+      URLDatabase[shortURL] = {shortURL: shortURL, longURL: req.body.longURL, user_id: req.session.user_id}
+      res.redirect("/urls");
+    } else {
+      let templateVars = {errorMsg: "Sorry, you can't update that URL."}
+      res.status(404);
+      res.render("errors", templateVars);
     }
+});
+
+//go to the individual _show pg if the user owns it
+app.get("/urls/:id", (req, res) => {
+  if (!req.session.user_id) {
+    res.send({ message: 'Sorry, this URL does not belong to you!' });
+    res.sendStatus(404);
+  } else {
+    let usersURLs = urlsForUser(req.session.user_id);
+    let shortURL = req.params.id;
+    let longURL = URLDatabase[shortURL].longURL;
+    let templateVars = { shortURL: shortURL, longURL: longURL, user: users[req.session.user_id]};
+    res.render("urls_show", templateVars);
+  }
 });
 
 //delete a user and reload the pg
@@ -214,28 +238,39 @@ app.post('/urls/:id/delete', (req, res) => {
   res.redirect("/urls")
 });
 
-//go to the individual _show pg
-app.get("/urls/:id", (req, res) => {
-  let usersURLs = urlsForUser(req.session.user_id)
-  let shortURL = req.params.id
-  let longURL = URLDatabase[shortURL]
-  if (usersURLs.user_id !== req.session.user_id) {
-    res.send({ message: 'Sorry, this URL does not belong to you!' });
-    res.sendStatus(404);
-  }else if (longURL) {
-    let templateVars = { shortURL: shortURL, longURL: longURL, user: users[req.session.user_id]};
-    res.render("/urls_show", templateVars);
-  } else {
-    res.sendStatus(404);
-  }
-})
-
 
 /*
 Issues:
-header doesn't say your email when logged in
-no one can get to new urls pg
-session id is not being set
+
+make function to check for existing user (takes user_id);
+
+make function to create/update url (takes all keys in db as params)
+
+make new errors page and render it whenever nec. use error msg as a templateVar
+
+
+
+
+for indvidual pg:
+if a URL for the given ID does not exist:
+(Minor) returns HTML with a relevant error message ---
+
+POST/:id
+if user is not logged in:
+(Minor) returns HTML with a relevant error message ---
+if user is logged it but does not own the URL for the given ID:
+(Minor) returns HTML with a relevant error message ---
+
+Login:
+if email and password params don't match an existing user:
+returns HTML with a relevant error message ---
+
+POST /register:
+if email or password are empty:
+    returns HTML with a relevant error message ---
+if email already exists:
+  returns HTML with a relevant error message ---
+
 
 
 */

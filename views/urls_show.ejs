@@ -11,15 +11,18 @@
   <h2>Shortened URL: <%= shortURL %></h2>
     <table>
       <tr>
+        <% if (user) { %>
           <td>
-        <form action="<%= url%>" method="POST" style="margin:5px;">
-        <input type="text" name="longURL" placeholder="<%= longURL %>" minlength=1 required>
-        <input type="submit" value="Update">
-        </form>
+            <form action="<%= url%>" method="POST" style="margin:5px;">
+              <input type="text" name="longURL" placeholder="<%= longURL %>" minlength=1 required>
+              <input type="submit" value="Update">
+            </form>
           </td>
+        <% } else { %>
           <td>
-
+            <p>Please login  or register to access this page!</p>
           </td>
+        <% } %>
       </tr>
     </table>
 
