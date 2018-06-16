@@ -40,7 +40,7 @@ function urlsForUser(id) {
 const URLDatabase = {
   "b2xVn2": {shortURL: "b2xVn2", longURL: "http://www.lighthouselabs.ca", user_id: "user2RandomID"},
   "9sm5xK": {shortURL: "9sm5xK", longURL: "http://www.google.com", user_id: "user3RandomID"},
-  "asdf12": {shortURL: "asdf12", longURL: "http://www.facebook.com", user_id: "user3RandomID"}
+  "asdf12": {shortURL: "asdf12", longURL: "http://www.facebook.com", user_id: "user5RandomID"}
 };
 
 const users = {
@@ -63,10 +63,13 @@ const users = {
     id: "user4RandomID",
     email: "user4@example.com",
     password: bcrypt.hashSync("a", 10)
+  },
+  "user5RandomID": {
+    id: "user5RandomID",
+    email: "a@a.com",
+    password: bcrypt.hashSync("a", 10)
   }
 };
-
-console.log(bcrypt.hashSync("purple-monkey-dinosaur", 10));
 
 app.get("/hello", (req, res) => {
   res.end("<html><body>Hello <b>World</b></body></html>\n");
@@ -96,8 +99,15 @@ app.get("/urls", (req, res) => {
 });
 
 //get new url page
-app.get("/urls/new", (req, res) => {
-    res.render("urls/new", templateVars);
+app.get("/urls/new", (req, res) => { //-------------------------------------------------
+  if (!req.session.user_id) {
+    res.send({ message: 'Sorry, only logged in users can shorten URLs!' });
+    return
+  } else {
+    let usersURLs = urlsForUser(req.session.user_id)
+    let templateVars = { URLs: usersURLs, user: users[req.session.user_id], session: req.session};
+    res.render("urls_new", templateVars);
+  }
 });
 
 //add the new url to the main pg
@@ -108,7 +118,7 @@ app.post("/urls", (req, res) => {
 
 //use shortURL to reach webpage
 app.get("/u/:shortURL", (req, res) => {
-  var longURL = URLDatabase[req.params.shortURL].longURL;
+  let longURL = URLDatabase[req.params.shortURL].longURL;
   if (req.params.shortURL in URLDatabase) {
     res.redirect(longURL);
   } else {
@@ -118,7 +128,7 @@ app.get("/u/:shortURL", (req, res) => {
 
 //get registration page
 app.get("/register", (req, res) => {
-  res.render("register");
+  res.render("/register");
 });
 
 //register - post user credentials to /register & add new user to the db
@@ -142,7 +152,7 @@ app.post('/urls/register', (req, res) => {
           email: req.body.email,
           password: hashedPassword
         }
-        req.session.user_id = "idString"
+        req.session.user_id = "idString" //------------------------------------
         res.redirect("/urls")
       }
     }
@@ -150,6 +160,7 @@ app.post('/urls/register', (req, res) => {
 
 //login only with existing username and password
 app.post('/login', (req, res) => {
+    let templateVars = {user: users[req.session.user_id]};
     if (req.body.email === "" || req.body.password === "") {
       res.sendStatus(400)
       return
@@ -157,13 +168,18 @@ app.post('/login', (req, res) => {
       let userFound = false;
       const userArray = Object.values(users)
       userArray.forEach(function(user) {
+        console.log("user", user);
         if (user.email === req.body.email && bcrypt.compareSync(req.body.password, user.password)) {
-          userFound = user;
+          userFound = user
+
+          //let user.id = currentUserID;
         }
-      })
+    })
       if (userFound) {
-        req.session.user_id = "idString"
-        res.redirect('/urls')
+
+        req.session.user_id = userFound.id; //---------------------------------
+        console.log("req.session", req.session);
+        res.redirect('/urls');
       } else {
         res.sendStatus(404);
       }
@@ -178,8 +194,8 @@ app.get("/login", (req, res) => {
 
 //logout
 app.post("/logout", (req, res) => {
-  req.session = null; //-------------------------------
-  res.redirect("login");
+  req.session = null;
+  res.redirect("/login");
 });
 
 //update a longurl and redirect to main pg
@@ -215,7 +231,14 @@ app.get("/urls/:id", (req, res) => {
 })
 
 
+/*
+Issues:
+header doesn't say your email when logged in
+no one can get to new urls pg
+session id is not being set
 
+
+*/
 
 
 
