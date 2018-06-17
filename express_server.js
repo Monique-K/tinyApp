@@ -3,8 +3,6 @@ const app = express();
 const PORT = 8080;
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
-const cookieParser = require("cookie-parser")
-app.use(cookieParser())
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
 cookieSession = require("cookie-session")
