@@ -3,15 +3,15 @@ const app = express();
 const PORT = 8080;
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
-const cookieParser = require('cookie-parser')
+const cookieParser = require("cookie-parser")
 app.use(cookieParser())
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt");
 const saltRounds = 10;
-cookieSession = require('cookie-session')
+cookieSession = require("cookie-session")
 app.set("view engine", "ejs");
 
 app.use(cookieSession({
-  name: 'session',
+  name: "session",
   keys: ["blah blah"],
   maxAge: 24 * 60 * 60 * 1000
 }))
@@ -87,7 +87,7 @@ app.get("/urls.json", (req, res) => {
   res.json(URLDatabase);
 });
 
-//get main url list page with only the user's URLs
+//get main url list page with only the user"s URLs
 app.get("/urls", (req, res) => {
   if (req.session.user_id) {
   let usersURLs = urlsForUser(req.session.user_id)
@@ -114,7 +114,7 @@ app.get("/urls/new", (req, res) => {
 app.post("/urls", (req, res) => {
   let randomString = generateRandomString();
   URLDatabase[randomString] = {shortURL: randomString, longURL: req.body.longURL, user_id: req.session.user_id}
-  res.redirect('/urls');
+  res.redirect("/urls");
 });
 
 //use shortURL to reach webpage
@@ -136,9 +136,9 @@ app.get("/register", (req, res) => {
 });
 
 //register - post user credentials to /register & add new user to the db
-app.post('/urls/register', (req, res) => {
+app.post("/urls/register", (req, res) => {
     const hashedPassword = bcrypt.hashSync(req.body.password, 10);
-    var idString = generateRandomString();
+    letidString = generateRandomString();
     if (req.body.email === "" || req.body.password === "") {
       let templateVars = {errorMsg: "Please enter an email and password."}
       res.status(400);
@@ -167,7 +167,7 @@ app.post('/urls/register', (req, res) => {
 });
 
 //login only with existing username and password
-app.post('/login', (req, res) => {
+app.post("/login", (req, res) => {
     let templateVars = {user: users[req.session.user_id]};
     if (req.body.email === "" || req.body.password === "") {
       let templateVars = {errorMsg: "Please enter an email and password."}
@@ -184,7 +184,7 @@ app.post('/login', (req, res) => {
     })
       if (userFound) {
         req.session.user_id = userFound.id;
-        res.redirect('/urls');
+        res.redirect("/urls");
       } else {
         let templateVars = {errorMsg: "Please enter a valid email and password."}
         res.status(404);
@@ -206,8 +206,8 @@ app.post("/logout", (req, res) => {
 });
 
 //update a longurl and redirect to main pg
-app.post('/urls/:id', (req, res) => {
-    if (req.session.user_id === Users[req.params.id].user_id) {
+app.post("/urls/:id", (req, res) => {
+    if (req.session.user_id === users[req.session.user_id].id) {
       let shortURL = req.params.id;
       URLDatabase[shortURL] = {shortURL: shortURL, longURL: req.body.longURL, user_id: req.session.user_id}
       res.redirect("/urls");
@@ -221,8 +221,9 @@ app.post('/urls/:id', (req, res) => {
 //go to the individual _show pg if the user owns it
 app.get("/urls/:id", (req, res) => {
   if (!req.session.user_id) {
-    res.send({ message: 'Sorry, this URL does not belong to you!' });
-    res.sendStatus(404);
+    let templateVars = {errorMsg: "Sorry, this URL does not belong to you."}
+      res.status(404);
+      res.render("errors", templateVars);
   } else {
     let usersURLs = urlsForUser(req.session.user_id);
     let shortURL = req.params.id;
@@ -233,47 +234,11 @@ app.get("/urls/:id", (req, res) => {
 });
 
 //delete a user and reload the pg
-app.post('/urls/:id/delete', (req, res) => {
+app.post("/urls/:id/delete", (req, res) => {
   delete URLDatabase[req.params.id];
   res.redirect("/urls")
 });
 
-
-/*
-Issues:
-
-make function to check for existing user (takes user_id);
-
-make function to create/update url (takes all keys in db as params)
-
-make new errors page and render it whenever nec. use error msg as a templateVar
-
-
-
-
-for indvidual pg:
-if a URL for the given ID does not exist:
-(Minor) returns HTML with a relevant error message ---
-
-POST/:id
-if user is not logged in:
-(Minor) returns HTML with a relevant error message ---
-if user is logged it but does not own the URL for the given ID:
-(Minor) returns HTML with a relevant error message ---
-
-Login:
-if email and password params don't match an existing user:
-returns HTML with a relevant error message ---
-
-POST /register:
-if email or password are empty:
-    returns HTML with a relevant error message ---
-if email already exists:
-  returns HTML with a relevant error message ---
-
-
-
-*/
 
 
 
