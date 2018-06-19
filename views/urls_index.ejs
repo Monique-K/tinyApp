@@ -1,35 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <title>TinyApp</title>
-</head>
-<body>
-  <% include _header.ejs %>
-  <p><a href="/urls/new" method="POST" action="<%url%>">Shorten a URL</a></p>
-
-<h2>Original & Shortened URLs</h2>
-  <table border="5" cellpadding="7">
-    <tr>
-      <th>Original URLs</th>
-      <th>Shortened URLs</th>
-    </tr>
-    <% for (let shortURL in URLs) { %>
-        <% var url = `/urls/${shortURL}/delete` %>
-    <tr>
-      <td><%= URLs[shortURL].longURL %></td>
-      <td><%= shortURL %></td>
-
-      <td>
-        <a href="/urls/<%= shortURL %>" method="POST" action="<%url%>">Edit</a>
-      </td>
-      <td>
-        <form method="POST" action="<%= url %>">
-          <button>Delete</button>
-        </form>
-      </td>
-    </tr>
-    <% } %>
-  </table>
-
-</body>
+  <head>
+    <title>TinyApp</title>
+  </head>
+  <body>
+    <% include _header.ejs %>
+    <p><a href="/urls/new" method="POST" action="<%url%>">Shorten a URL</a></p>
+    <h2>Original & Shortened URLs</h2>
+    <table border="5" cellpadding="7">
+      <tr>
+        <th>Original URLs</th>
+        <th>Shortened URLs</th>
+      </tr>
+      <% for (let shortURL in URLs) { %>
+          <% var url = `/urls/${shortURL}/delete` %>
+      <tr>
+        <td><%= URLs[shortURL].longURL %></td>
+        <td><%= shortURL %></td>
+        <td>
+          <a href="/urls/<%= shortURL %>" method="POST" action="<%url%>">Edit</a>
+        </td>
+        <td>
+          <form method="POST" action="<%= url %>">
+            <button>Delete</button>
+          </form>
+        </td>
+      </tr>
+      <% } %>
+    </table>
+  </body>
 </html>

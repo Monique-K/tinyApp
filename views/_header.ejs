@@ -1,17 +1,16 @@
-
-  <header style="background-color:#73b9d1">
-    <h1> Welcome to TinyApp </h1>
-    <% if (user) { %>
-      <div>Welcome <%= user.email %></div>
-      <form action="/logout" method="POST">
-        <button type="submit">Logout</button>
-      </form>
-    <% } else { %>
-        Please Login or Register to access more content!
-      <br>
-       <a href="/login"> Login </a>
-       <br>
-       <a href="/register"> Register </a>
-    <% } %>
-  </header>
+<header style="background-color:#73b9d1">
+  <h1> Welcome to TinyApp </h1>
+  <% if (user) { %>
+    <div>Welcome <%= user.email %></div>
+    <form action="/logout" method="POST">
+      <button type="submit">Logout</button>
+    </form>
+  <% } else { %>
+      Please Login or Register to access more content!
+    <br>
+     <a href="/login"> Login </a>
+     <br>
+     <a href="/register"> Register </a>
+  <% } %>
+</header>
 

@@ -4,8 +4,7 @@ const PORT = 8080;
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 const bcrypt = require("bcrypt");
-const saltRounds = 10;
-cookieSession = require("cookie-session")
+cookieSession = require("cookie-session");
 app.set("view engine", "ejs");
 
 app.use(cookieSession({
@@ -14,6 +13,7 @@ app.use(cookieSession({
   maxAge: 24 * 60 * 60 * 1000
 }))
 
+//generate random IDs
 function generateRandomString() {
   let randomArray = []
   let choices ="qwertyuioplkjhgfdsazxcvbnm1234567890"
@@ -25,6 +25,7 @@ function generateRandomString() {
   return randomString;
 };
 
+//list the URLs owned by a specific user
 function urlsForUser(id) {
   let currentUserURLS = {};
   for (shortURL in URLDatabase) {
@@ -73,6 +74,7 @@ app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
+//get root page - regirects to login or register
 app.get("/", (req, res) => {
   if (req.session) {
     res.redirect("/login");
@@ -81,19 +83,26 @@ app.get("/", (req, res) => {
   }
 });
 
+//get urls.json page
 app.get("/urls.json", (req, res) => {
   res.json(URLDatabase);
 });
 
-//get main url list page with only the user"s URLs
+//get main url list page with only the user's URLs
 app.get("/urls", (req, res) => {
-  if (req.session.user_id) {
-  let usersURLs = urlsForUser(req.session.user_id)
-  let templateVars = {URLs: usersURLs, user: users[req.session.user_id]};
-      return res.render("urls_index", templateVars);
-    } else {
-      res.redirect("/login");
-    }
+  if (req.session.user_id && req.session.user_id in users) {
+    let usersURLs = urlsForUser(req.session.user_id)
+    let templateVars = {URLs: usersURLs, user: users[req.session.user_id]};
+    return res.render("urls_index", templateVars);
+  } else {
+    res.redirect("/login");
+  }
+});
+
+//get login pg
+app.get("/login", (req, res) => {
+  let templateVars = {user: users[req.session.user_id]};
+  res.render("login", templateVars);
 });
 
 //get new url page
@@ -106,13 +115,6 @@ app.get("/urls/new", (req, res) => {
     let templateVars = {URLs: usersURLs, user: users[req.session.user_id], session: req.session};
     res.render("urls_new", templateVars);
   }
-});
-
-//add the new url to the main pg
-app.post("/urls", (req, res) => {
-  let randomString = generateRandomString();
-  URLDatabase[randomString] = {shortURL: randomString, longURL: req.body.longURL, user_id: req.session.user_id}
-  res.redirect("/urls");
 });
 
 //use shortURL to reach webpage
@@ -136,7 +138,7 @@ app.get("/register", (req, res) => {
 //register - post user credentials to /register & add new user to the db
 app.post("/urls/register", (req, res) => {
     const hashedPassword = bcrypt.hashSync(req.body.password, 10);
-    letidString = generateRandomString();
+    let idString = generateRandomString();
     if (req.body.email === "" || req.body.password === "") {
       let templateVars = {errorMsg: "Please enter an email and password."}
       res.status(400);
@@ -179,7 +181,7 @@ app.post("/login", (req, res) => {
         if (user.email === req.body.email && bcrypt.compareSync(req.body.password, user.password)) {
           userFound = user
         }
-    })
+      })
       if (userFound) {
         req.session.user_id = userFound.id;
         res.redirect("/urls");
@@ -191,43 +193,33 @@ app.post("/login", (req, res) => {
     }
 });
 
-//get login pg
-app.get("/login", (req, res) => {
-  let templateVars = {user: users[req.session.user_id]};
-  res.render("login", templateVars);
-});
-
 //logout
 app.post("/logout", (req, res) => {
   req.session = null;
   res.redirect("/login");
 });
 
-//update a longurl and redirect to main pg
-app.post("/urls/:id", (req, res) => {
-    if (req.session.user_id === users[req.session.user_id].id) {
-      let shortURL = req.params.id;
-      URLDatabase[shortURL] = {shortURL: shortURL, longURL: req.body.longURL, user_id: req.session.user_id}
-      res.redirect("/urls");
-    } else {
-      let templateVars = {errorMsg: "Sorry, you can't update that URL."}
-      res.status(404);
-      res.render("errors", templateVars);
-    }
+//add the new url to the main pg
+app.post("/urls", (req, res) => {
+  if (req.session.user_id) {
+    let randomString = generateRandomString();
+    URLDatabase[randomString] = {shortURL: randomString, longURL: req.body.longURL, user_id: req.session.user_id}
+    res.redirect("/urls");
+  } else {
+    res.redirect("/login");
+  }
 });
 
-//go to the individual _show pg if the user owns it
-app.get("/urls/:id", (req, res) => {
-  if (!req.session.user_id) {
-    let templateVars = {errorMsg: "Sorry, this URL does not belong to you."}
-      res.status(404);
-      res.render("errors", templateVars);
-  } else {
-    let usersURLs = urlsForUser(req.session.user_id);
+//update a long URL and redirect to main pg
+app.post("/urls/:id", (req, res) => {
+  if (req.session.user_id === users[req.session.user_id].id) {
     let shortURL = req.params.id;
-    let longURL = URLDatabase[shortURL].longURL;
-    let templateVars = { shortURL: shortURL, longURL: longURL, user: users[req.session.user_id]};
-    res.render("urls_show", templateVars);
+    URLDatabase[shortURL] = {shortURL: shortURL, longURL: req.body.longURL, user_id: req.session.user_id}
+    res.redirect("/urls");
+  } else {
+    let templateVars = {errorMsg: "Sorry, you can't update that URL."}
+    res.status(404);
+    res.render("errors", templateVars);
   }
 });
 
@@ -237,6 +229,19 @@ app.post("/urls/:id/delete", (req, res) => {
   res.redirect("/urls")
 });
 
-
+//go to the individual page for a URL (if it is owned by that user)
+app.get("/urls/:id", (req, res) => {
+  if (!req.session.user_id) {
+    let templateVars = {errorMsg: "Sorry, this URL does not belong to you."};
+    res.status(404);
+    res.render("errors", templateVars);
+  } else {
+    let usersURLs = urlsForUser(req.session.user_id);
+    let shortURL = req.params.id;
+    let longURL = URLDatabase[shortURL].longURL;
+    let templateVars = { shortURL: shortURL, longURL: longURL, user: users[req.session.user_id]};
+    res.render("urls_show", templateVars);
+  }
+});
 
 
